@@ -12,6 +12,7 @@ module.exports = {
   },
   rules: {
     'prettier/prettier': 'error',
+    '@typescript-eslint/naming-convention': 'off',
   },
   plugins: ['prettier'],
 };
