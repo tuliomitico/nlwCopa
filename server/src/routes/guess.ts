@@ -10,19 +10,80 @@ export async function guessRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   fastify.post(
-    'pools/:poolId/games/:gameId/guesses',
+    '/pools/:poolId/games/:gameId/guesses',
     { onRequest: [authenticate] },
     async (request, reply) => {
       const createGuessParams = z.object({
         poolId: z.string(),
         gameId: z.string(),
       });
-      const creaGuessBody = z.object({
+      const createGuessBody = z.object({
         firstTeamPoints: z.number(),
+        secondTeamPoints: z.number(),
       });
       const { gameId, poolId } = createGuessParams.parse(request.params);
 
-      // Aula 4 - hora 1 minuto 13 segundo 40
+      const { firstTeamPoints, secondTeamPoints } = createGuessBody.parse(
+        request.body,
+      );
+
+      const participant = await prisma.participant.findUnique({
+        where: {
+          poolId_userId: {
+            poolId,
+            userId: request.user.sub,
+          },
+        },
+      });
+
+      if (participant == null) {
+        return await reply.status(400).send({
+          messsage: "You're not allowed to create a guess inside this pool.",
+        });
+      }
+
+      const guess = await prisma.guess.findUnique({
+        where: {
+          participantId_gameId: {
+            participantId: participant.id,
+            gameId,
+          },
+        },
+      });
+
+      if (guess != null) {
+        return await reply.status(400).send({
+          messsage: 'You already sent a guess to this game on this pool.',
+        });
+      }
+
+      const game = await prisma.game.findUnique({
+        where: {
+          id: gameId,
+        },
+      });
+
+      if (game == null) {
+        return await reply.status(400).send({
+          messsage: 'Game not found.',
+        });
+      }
+
+      if (game.date < new Date()) {
+        return await reply.status(400).send({
+          messsage: 'You cannot send guesses after the game date.',
+        });
+      }
+
+      await prisma.guess.create({
+        data: {
+          gameId,
+          participantId: participant.id,
+          firstTeamPoints,
+          secondTeamPoints,
+        },
+      });
+      return await reply.status(201).send();
     },
   );
 }
