@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
@@ -15,7 +16,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     const { access_token } = createUserBody.parse(request.body);
 
     const userResponse = await fetch(
-      'https://www.googleapi.com/oauth/v2/userinfo',
+      'https://www.googleapis.com/oauth2/v2/userinfo',
       {
         method: 'GET',
         headers: {
