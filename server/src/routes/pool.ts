@@ -132,41 +132,50 @@ export async function poolRoutes(fastify: FastifyInstance): Promise<void> {
     });
     return { pools };
   });
-  fastify.get('/pools/:id', { onRequest: [authenticate] }, async request => {
-    const getPoolParams = z.object({
-      id: z.string(),
-    });
-    const { id } = getPoolParams.parse(request.params);
+  fastify.get(
+    '/pools/:poolId',
+    { onRequest: [authenticate] },
+    async request => {
+      const getPoolParams = z.object({
+        poolId: z.string(),
+      });
+      const { poolId } = getPoolParams.parse(request.params);
 
-    const pool = await prisma.pool.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        _count: {
-          select: {
-            participants: true,
-          },
-        },
-        participants: {
-          select: {
-            id: true,
-            user: {
-              select: {
-                avatarUrl: true,
-              },
+      const pool = await prisma.pool.findFirst({
+        where: {
+          id: poolId,
+          participants: {
+            some: {
+              userId: request.user.sub,
             },
           },
-          take: 4,
         },
-        owner: {
-          select: {
-            id: true,
-            name: true,
+        include: {
+          _count: {
+            select: {
+              participants: true,
+            },
+          },
+          participants: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+            take: 4,
+          },
+          owner: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-    });
-    return { pool };
-  });
+      });
+      return { pool };
+    },
+  );
 }
